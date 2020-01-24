@@ -1,3 +1,4 @@
 burnysc2
 tensorflow==2.0
 numpy
+opencv-python

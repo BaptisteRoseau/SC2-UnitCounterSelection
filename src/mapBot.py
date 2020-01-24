@@ -19,7 +19,7 @@ class MapBot(sc2.BotAI):
         self.race = race
         self.iter_last_step = 0
         self.wait_iter = 0 # iterations
-        self.nwaves = 1008
+        self.nwaves = 1512
         self.step = 0
         self.wave_units = [] # contains [unitTypeID, amount]
         if self.race == Race.Zerg:

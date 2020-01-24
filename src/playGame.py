@@ -32,8 +32,8 @@ maps = [
     #"NewRepugnancyLE",
     #"OdysseyLE",
     #"PortAleksanderLE",
-    #"ProximaStationLE",
-    "SequencerLE",
+    "ProximaStationLE",
+    #"SequencerLE",
     #"YearZeroLE"
 ]
 

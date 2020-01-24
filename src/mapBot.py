@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import math
 import random
+import os
 
 import sc2
 from sc2.game_data import Cost
@@ -16,11 +17,11 @@ class MapBot(sc2.BotAI):
     def __init__(self, playerID=1, race=Race.Zerg):
         self.playerID = playerID
         self.race = race
-        self.last_spawn_time = 0
-        self.spawn_time = 100 # iterations
+        self.iter_last_step = 0
+        self.wait_iter = 0 # iterations
         self.nwaves = 0
-        self.units_are_alive = True
-        self.wave_finished = False #TODO: function with time AND unit health ?
+        self.step = 0
+        self.wave_units = [] # contains [unitTypeID, amount]
         if self.race == Race.Zerg:
             self.spawnable_units = [
                     UnitTypeId.ZERGLING,
@@ -44,7 +45,6 @@ class MapBot(sc2.BotAI):
                     UnitTypeId.THOR,
                     UnitTypeId.HELLIONTANK,
                     UnitTypeId.CYCLONE,
-                    UnitTypeId.RAVEN,
                     UnitTypeId.VIKINGFIGHTER,
                     UnitTypeId.MEDIVAC,
                     UnitTypeId.BATTLECRUISER,
@@ -56,26 +56,35 @@ class MapBot(sc2.BotAI):
 
     async def on_step(self, iteration):
         if iteration == 0:
-            await self.client.debug_control_enemy()
-            await self.client.debug_show_map()
+            await self._client.debug_control_enemy()
+            await self._client.debug_show_map()
+            await self._client.move_camera(self._game_info.map_center - Point2((0, 3)))
+            await self.cleanup_units()
             print("BOT "+str(self.playerID)+": Super user mode enabled")
         
         # Displays the map using opencv
-        await self.display_map()
+        #await self.display_map()
 
-        # Spawn units every self.spawn_time seconds
-        await self.start_attack()
-        if iteration > self.last_spawn_time + self.spawn_time:
-            if not self.units_are_alive:
+        await self.start_attack() # Constantly attacking on the middle of the map
+        if iteration > self.iter_last_step + self.wait_iter:
+            self.iter_last_step = iteration
+            if self.step == 0:
                 # Spawn units and tell them to attack
-                await self.spawn_units(2000)
-                self.units_are_alive = True
-                self.last_spawn_time = iteration
                 self.nwaves += 1
+                await self.spawn_units(2000)
+                self.step += 1
+                self.wait_iter = 120 #iterations
+            elif self.step == 1:
+                # Save result of the battle
+                await self.save_battle_result_unit_composition()
+                self.step += 1
+                self.wait_iter = 5 #iterations
             else:
                 # Kills all units
                 await self.cleanup_units()
-                self.units_are_alive = False
+                self.step = 0
+                self.wait_iter = 2 #iterations
+
 
         # End the game after enough waves are done
         if self.nwaves > 10:
@@ -83,14 +92,13 @@ class MapBot(sc2.BotAI):
             await self._client.leave()
     
 
-    ## ==== METHODs
+    ## ==== METHODS
 
     async def spawn_units(self, ressources):
         """ Spawns units for the amount of ressources given, for each player """
-        # Spawning units for player 1 (Zerg)
         spawn_info = []
         ressources_left = ressources
-        spawn_location = self._game_info.map_center - Point2((6, 6)) if self.race == Race.Zerg else self._game_info.map_center + Point2((6, 6))
+        spawn_location = self._game_info.map_center - Point2((12, 12)) if self.race == Race.Zerg else self._game_info.map_center + Point2((12, 12))
         while ressources_left > 100:
             for unit in self.spawnable_units:
                 unit_cost = self.calculate_cost(unit)
@@ -98,16 +106,30 @@ class MapBot(sc2.BotAI):
                 if unit == UnitTypeId.BROODLORD:  unit_cost += self.calculate_cost(UnitTypeId.CORRUPTOR)
                 elif unit == UnitTypeId.BANELING: unit_cost += self.calculate_cost(UnitTypeId.ZERGLING)
                 elif unit == UnitTypeId.LURKER:   unit_cost += self.calculate_cost(UnitTypeId.HYDRALISK)
+                elif unit == UnitTypeId.ZERGLING:   unit_cost = Cost(25, 0) # A pair of Zerglings cost 50 minerals
 
                 unit_cost = unit_cost.minerals + unit_cost.vespene
                 amount = int(random.uniform(0, 1)*int(ressources_left/unit_cost))
                 if amount > 0 and random.uniform(0, 1) < 1./len(self.spawnable_units):
-                    print("Added "+str(amount)+" unit "+str(unit)+" for a cost of "+str(unit_cost*amount))
+                    # Adding the unit to the list of units that will fight
+                    # If the unit is already in the list, just adding the amount 
+                    found = False
+                    for i in range(len(self.wave_units)):
+                        if self.wave_units[i][0] == unit:
+                            self.wave_units[i][1] += amount
+                            spawn_info[i][1] += amount
+                            found = True
+                    # Else, just create a new couple [unit, amount]
+                    if not found:
+                        spawn_info.append([unit, amount, spawn_location, self.playerID])
+                        self.wave_units.append([unit, amount]) # Saving which units were spawned for this wave
+                    # Updating ressources left
                     ressources_left -= unit_cost*amount
-                    spawn_info.append([unit, amount, spawn_location, self.playerID])
+                    print("Added "+str(amount)+" unit "+str(unit)+" for a cost of "+str(unit_cost*amount)+" (already in list: "+str(found)+")")
+
         print("Ressources left for"+str(self.race)+": "+str(ressources_left))
         
-        # Spaning selected units
+        # Spawning selected units
         await self._client.debug_create_unit(spawn_info)
         print("Spawned units of wave "+str(self.nwaves))
 
@@ -124,6 +146,75 @@ class MapBot(sc2.BotAI):
         for unit in self.units:
             self.do(unit.attack(self._game_info.map_center))
 
+    def hp_of(self, unitID, unitInitialAmount):
+        """ Returns the mean of the percentage of health of each unit of type unitID """
+        units = self.units(unitID)
+        if not units: return 0 # units is empty
+
+        hp = 0
+        for unit in units:
+            hp += unit.health_percentage
+        return hp/unitInitialAmount
+
+    def hp_all(self, unitInitialAmount):
+        """ Returns the mean of the percentage of health of each unit of the player """
+        units = self.units
+        if not units: return 0. # units is empty
+        
+        hp = 0
+        for unit in units:
+            hp += unit.health_percentage
+        return hp/unitInitialAmount
+
+    async def save_battle_result_unit_composition(self):
+        """ Saves the units hp into a file as a numpy array. """
+        assert self.wave_units
+
+        # Creating input array from units selected for this wave
+        # Array: [unit amount, unit hp percentage, unit amount, unit hp percentage, ..., upgrade1, upgrade2, ..]
+        inputArr = np.zeros(2*len(self.spawnable_units)+5, dtype=np.float32) # +5 because 5 upgrades
+        for unit in self.wave_units:
+            idx = self.spawnable_units.index(unit[0])
+            inputArr[2*idx]    += unit[1] # unit amount
+            inputArr[2*idx + 1] = 1. # hp percentage
+        
+        # Adding upgrades
+        idx = 2*len(self.spawnable_units)
+        inputArr[idx]     = 1.
+        inputArr[idx + 1] = 1.
+        inputArr[idx + 2] = 1.
+        inputArr[idx + 3] = 1.
+        inputArr[idx + 4] = 1.
+
+        # Saving directories
+        pathInput  = os.path.join("data", "Bot"+str(self.playerID), "INPUT")
+        pathOutput = os.path.join("data", "Bot"+str(self.playerID), "OUTPUT")
+        
+        # Saving input array
+        np.savetxt(os.path.join(pathInput, "InputWave"+str(self.nwaves)+".csv"), inputArr)
+        print("Saved "+os.path.join(pathInput, "InputWave"+str(self.nwaves)+".csv"))
+
+        # Calculating result of the fight
+        units_initial_amount = 0
+        for a in self.wave_units:
+            units_initial_amount += a[1]
+        result = self.hp_all(units_initial_amount)
+        print("Result:", result)
+
+        # Saving output array
+        np.savetxt(os.path.join(pathOutput, "OutputWave"+str(self.nwaves)+".csv"),
+                   np.array([result], dtype=np.float32))
+        print("Saved "+os.path.join(pathOutput, "OutputWave"+str(self.nwaves)+".csv"))
+
+        # Reseting units used
+        self.wave_units = []
+
+    
+    async def save_battle_result_topology(self):
+        #TODO
+        pass
+
+    #Just a tool to show the map on Linux
     async def display_map(self):
         """ Just a display to know what is going on in the game """
         game_data = np.zeros((self.game_info.map_size[1], self.game_info.map_size[0], 3), np.uint8)

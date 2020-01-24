@@ -5,5 +5,5 @@ class EmptyBot(sc2.BotAI):
     def __init__(self):
         pass
     
-    def on_step(self):
+    async def on_step(self, iteration):
         pass

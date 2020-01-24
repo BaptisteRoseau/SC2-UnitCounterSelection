@@ -9,41 +9,42 @@ import random
 from datetime import datetime 
 
 maps = [
-    "AbiogenesisLE",
-    "AbyssalReefLE",
-    "AcidPlantLE",
-    "AcolyteLE",
-    "AscensiontoAiurLE",
-    "AutomatonLE",
-    "BackwaterLE",
-    "BattleontheBoardwalkLE",
-    "BlackpinkLE",
-    "BloodBoilLE",
-    "CatalystLE",
-    "CyberForestLE",
-    "DefendersLandingLE",
-    "EastwatchLE",
-    "FrostLE",
-    "InterloperLE",
-    "KairosJunctionLE",
-    "KingsCoveLE",
-    "MechDepotLE",
-    "NeonVioletSquareLE",
-    "NewRepugnancyLE",
-    "OdysseyLE",
-    "PortAleksanderLE",
-    "ProximaStationLE",
+    #"AbiogenesisLE",
+    #"AbyssalReefLE",
+    #"AcidPlantLE",
+    #"AcolyteLE",
+    #"AscensiontoAiurLE",
+    #"AutomatonLE",
+    #"BackwaterLE",
+    #"BattleontheBoardwalkLE",
+    #"BlackpinkLE",
+    #"BloodBoilLE",
+    #"CatalystLE",
+    #"CyberForestLE",
+    #"DefendersLandingLE",
+    #"EastwatchLE",
+    #"FrostLE",
+    #"InterloperLE",
+    #"KairosJunctionLE",
+    #"KingsCoveLE",
+    #"MechDepotLE",
+    #"NeonVioletSquareLE",
+    #"NewRepugnancyLE",
+    #"OdysseyLE",
+    #"PortAleksanderLE",
+    #"ProximaStationLE",
     "SequencerLE",
-    "YearZeroLE"
+    #"YearZeroLE"
 ]
 
 replay_name = "replays/" + datetime.now().strftime("%m-%d-%Y_%H-%M-%S") + ".SC2Replay"
 
 def main():
     sc2.run_game(sc2.maps.get(maps[random.randint(0, len(maps) - 1)]), [
-        Bot(Race.Zerg, MapBot()),
-        Computer(Race.Terran, Difficulty.Medium)
+        Bot(Race.Zerg, MapBot(1, Race.Zerg)),
+        Bot(Race.Terran, MapBot(2, Race.Terran))
     ], realtime=False, save_replay_as=replay_name)
+        #Computer(Race.Terran, Difficulty.Medium)
 
 if __name__ == '__main__':
     main()

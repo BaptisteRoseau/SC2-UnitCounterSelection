@@ -19,7 +19,7 @@ class MapBot(sc2.BotAI):
         self.race = race
         self.iter_last_step = 0
         self.wait_iter = 0 # iterations
-        self.nwaves = 0
+        self.nwaves = 1008
         self.step = 0
         self.wave_units = [] # contains [unitTypeID, amount]
         if self.race == Race.Zerg:
@@ -87,7 +87,7 @@ class MapBot(sc2.BotAI):
 
 
         # End the game after enough waves are done
-        if self.nwaves > 10:
+        if self.nwaves > 10000:
             print("BOT "+str(self.playerID)+": Wave "+str(self.nwaves)+" reached, leaving the game.")
             await self._client.leave()
     

@@ -1,4 +1,7 @@
 burnysc2
-tensorflow==2.0
+tensorflow==2.1.0
 numpy
 opencv-python
+jupyterlab
+sklearn
+matplotlib

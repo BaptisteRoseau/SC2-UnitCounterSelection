@@ -19,7 +19,8 @@ class MapBot(sc2.BotAI):
         self.race = race
         self.iter_last_step = 0
         self.wait_iter = 0 # iterations
-        self.nwaves = 1512
+        self.nwaves_begin = self.nb_waves_saved()
+        self.nwaves = self.nb_waves_saved() # 1512
         self.step = 0
         self.wave_units = [] # contains [unitTypeID, amount]
         if self.race == Race.Zerg:
@@ -71,7 +72,7 @@ class MapBot(sc2.BotAI):
             if self.step == 0:
                 # Spawn units and tell them to attack
                 self.nwaves += 1
-                await self.spawn_units(2000)
+                await self.spawn_units(max(25*(self.nwaves - self.nwaves_begin), 250))
                 self.step += 1
                 self.wait_iter = 120 #iterations
             elif self.step == 1:
@@ -87,7 +88,7 @@ class MapBot(sc2.BotAI):
 
 
         # End the game after enough waves are done
-        if self.nwaves > 10000:
+        if self.nwaves > 20000:
             print("BOT "+str(self.playerID)+": Wave "+str(self.nwaves)+" reached, leaving the game.")
             await self._client.leave()
     
@@ -235,3 +236,20 @@ class MapBot(sc2.BotAI):
 
         cv2.imshow(str(self.playerID), resized)
         cv2.waitKey(1)
+
+    def numberOfFiles(self, path):
+        return len([f for f in os.listdir(path)if os.path.isfile(os.path.join(path, f))])
+
+    def nb_waves_saved(self):
+        pathBot1Input  = os.path.join("data", "Bot1", "INPUT")
+        pathBot2Input  = os.path.join("data", "Bot2", "INPUT")
+        pathBot1Output = os.path.join("data", "Bot1", "OUTPUT")
+        pathBot2Output = os.path.join("data", "Bot2", "OUTPUT")
+
+        file_count = self.numberOfFiles(pathBot1Input)
+        assert file_count == self.numberOfFiles(pathBot2Input)
+        assert file_count == self.numberOfFiles(pathBot1Output)
+        assert file_count == self.numberOfFiles(pathBot2Output)
+        # If you pass this line, the data has the good format
+        print("Found", file_count, "files.")
+        return file_count

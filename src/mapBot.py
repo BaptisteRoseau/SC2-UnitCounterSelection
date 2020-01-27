@@ -20,8 +20,10 @@ class MapBot(sc2.BotAI):
         self.iter_last_step = 0
         self.wait_iter = 0 # iterations
         self.nwaves_begin = self.nb_waves_saved()
-        self.nwaves = self.nb_waves_saved() # 1512
+        self.nwaves_end = 6850
+        self.nwaves = self.nb_waves_saved()
         self.step = 0
+        self.upgrade = 1.
         self.wave_units = [] # contains [unitTypeID, amount]
         if self.race == Race.Zerg:
             self.spawnable_units = [
@@ -77,7 +79,7 @@ class MapBot(sc2.BotAI):
                 self.wait_iter = 120 #iterations
             elif self.step == 1:
                 # Save result of the battle
-                await self.save_battle_result_unit_composition()
+                #await self.save_battle_result_unit_composition()
                 self.step += 1
                 self.wait_iter = 5 #iterations
             else:
@@ -86,9 +88,18 @@ class MapBot(sc2.BotAI):
                 self.step = 0
                 self.wait_iter = 2 #iterations
 
+        # Upgrading units every third of the wave count
+        if (self.nwaves - self.nwaves_begin)/(self.nwaves_end - self.nwaves_begin) > 0.3 and self.upgrade == 1. and self.step > 1:
+            await self._client.debug_upgrade()
+            self.upgrade += 1.
+            print("Upgraded units to "+str(int(self.upgrade))+"-"+str(int(self.upgrade)))
+        if (self.nwaves - self.nwaves_begin)/(self.nwaves_end - self.nwaves_begin) > 0.6 and self.upgrade == 2. and self.step > 1:
+            await self._client.debug_upgrade()
+            self.upgrade += 1.
+            print("Upgraded units to "+str(int(self.upgrade))+"-"+str(int(self.upgrade)))
 
         # End the game after enough waves are done
-        if self.nwaves > 20000:
+        if self.nwaves > self.nwaves_end:
             print("BOT "+str(self.playerID)+": Wave "+str(self.nwaves)+" reached, leaving the game.")
             await self._client.leave()
     
@@ -98,8 +109,11 @@ class MapBot(sc2.BotAI):
     async def spawn_units(self, ressources):
         """ Spawns units for the amount of ressources given, for each player """
         spawn_info = []
+        self.wave_units = []
         ressources_left = ressources
         spawn_location = self._game_info.map_center - Point2((12, 12)) if self.race == Race.Zerg else self._game_info.map_center + Point2((12, 12))
+
+        # Selecting random units to be spawned
         while ressources_left > 100:
             for unit in self.spawnable_units:
                 unit_cost = self.calculate_cost(unit)
@@ -128,8 +142,8 @@ class MapBot(sc2.BotAI):
                     ressources_left -= unit_cost*amount
                     print("Added "+str(amount)+" unit "+str(unit)+" for a cost of "+str(unit_cost*amount)+" (already in list: "+str(found)+")")
 
-        print("Ressources left for"+str(self.race)+": "+str(ressources_left))
-        
+        print("Ressources left for "+str(self.race)+": "+str(ressources_left)+" (Used "+str(ressources-ressources_left)+")")
+
         # Spawning selected units
         await self._client.debug_create_unit(spawn_info)
         print("Spawned units of wave "+str(self.nwaves))
@@ -181,11 +195,11 @@ class MapBot(sc2.BotAI):
         
         # Adding upgrades
         idx = 2*len(self.spawnable_units)
-        inputArr[idx]     = 1.
-        inputArr[idx + 1] = 1.
-        inputArr[idx + 2] = 1.
-        inputArr[idx + 3] = 1.
-        inputArr[idx + 4] = 1.
+        inputArr[idx]     = self.upgrade
+        inputArr[idx + 1] = self.upgrade
+        inputArr[idx + 2] = self.upgrade
+        inputArr[idx + 3] = self.upgrade
+        inputArr[idx + 4] = self.upgrade
 
         # Saving directories
         pathInput  = os.path.join("data", "Bot"+str(self.playerID), "INPUT")

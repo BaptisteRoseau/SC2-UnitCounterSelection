@@ -26,6 +26,10 @@ inputArr = waveInputArr.copy()
 waveOutputArr = np.loadtxt(os.path.join(pathBot1Output, "OutputWave1.csv"), dtype=np.float32) - np.loadtxt(os.path.join(pathBot2Output, "OutputWave1.csv"), dtype=np.float32)
 outputArr = np.array([waveOutputArr])
 
+
+terranBotWaveInputArr = np.array([np.loadtxt(os.path.join(pathBot2Input, "InputWave1.csv"), dtype=np.float32)])
+terranBotInputArr = terranBotWaveInputArr.copy()
+
 # Concatenating each files
 print("Concatenating files... (0%)", end='\r')
 for i in range(2, file_count+1):
@@ -35,13 +39,20 @@ for i in range(2, file_count+1):
 
     waveOutputArr = np.loadtxt(os.path.join(pathBot1Output, "OutputWave"+str(i)+".csv"), dtype=np.float32) - np.loadtxt(os.path.join(pathBot2Output, "OutputWave"+str(i)+".csv"), dtype=np.float32)
     outputArr = np.append(outputArr, [waveOutputArr], axis=0)
+
+    terranBotWaveInputArr = np.array(np.loadtxt(os.path.join(pathBot2Input, "InputWave"+str(i)+".csv"), dtype=np.float32))
+    terranBotInputArr = np.concatenate((terranBotInputArr, [terranBotWaveInputArr]), axis=0)
+
     print("Concatenating files... ("+str(100*i/file_count)+"%)", end='\r')
 print()
 
 # Saving data into numpy format
 print("Input data shape", inputArr.shape)
 print("Output data shape", outputArr.shape)
+print("Terran Bot data shape", terranBotInputArr.shape)
 np.save(os.path.join("data", "MergedData", "InputData.npy"), inputArr)
 np.save(os.path.join("data", "MergedData", "OutputData.npy"), outputArr)
+np.save(os.path.join("data", "MergedData", "terranBotInputData.npy"), terranBotInputArr)
 print("Saved", os.path.join("data", "MergedData", "InputData.npy"))
 print("Saved", os.path.join("data", "MergedData", "OutputData.npy"))
+print("Saved", os.path.join("data", "MergedData", "terranBotInputData.npy"))

@@ -5,3 +5,6 @@ opencv-python
 jupyterlab
 sklearn
 matplotlib
+gym
+keras-rl
+talos

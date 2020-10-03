@@ -25,11 +25,20 @@ This data is used by the training scripts.
 
 ## Training of the model
 
+### Description
 Two jupyter-notebook are used for training. If you want to use a GPU for the training, make you you have CUDA 10.0, 10.1 and 10.2 installed, as they are used by Tensorflow.
 
-The first one uses the results of a battle, taking the units composition, health and upgrades as input, and the result of the battle as output.
+[Training_Step_1.ipynb](Training_Step_1.ipynb) uses the results of a battle, taking the units composition, health and upgrades as input, and the result of the battle as output.
 This result is between [-1, 1]. -1 if the Terran wins without any losses, 1 the Zerg wins without any losses, 0 if no unit is either dammaged or alive.
 
-The second one takes the Terran units in input, and returns the Zerg units choice to counter them.
+[Training_Step_2.ipynb](Training_Step_2.ipynb) takes the Terran units as input, and returns the Zerg units choice to counter them.
 It uses reinforcment learning method, using the first predicting model as a reference to estimate the result of the battle.
 It is not done yet.
+
+### Commands
+
+After making sure StarCraft II is installed, you can:
+
+1. Run Simulation using `python3 playGame.py`
+2. Merge output data using `python3 mergeData.py`
+3. Train the model using either `Training_Step_1.ipynb` or `Training_Step_1.ipynb` jupyter notebook.

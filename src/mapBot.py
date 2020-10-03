@@ -10,8 +10,6 @@ from sc2.constants import UnitTypeId
 from sc2.position import Point2
 from sc2 import Race
 
-#TODO: Manage upgrades
-
 #An empty bot to let the other do whatever he wants
 class MapBot(sc2.BotAI):
     def __init__(self, playerID=1, race=Race.Zerg):
